@@ -146,19 +146,9 @@ const Queue = (() => {
             _notify();
 
             try {
-                // Compress the image before sending to reduce payload size
-                let imageForApi = job.image;
-                if (imageForApi && imageForApi.startsWith('data:')) {
-                    try {
-                        imageForApi = await LudoAPI.compressImage(imageForApi);
-                    } catch (compErr) {
-                        console.warn('⚠️ Image compression failed, using original:', compErr.message);
-                    }
-                }
-
                 const params = {
                     motion_prompt: job.settings.motion_prompt,
-                    initial_image: imageForApi,
+                    initial_image: job.image,
                     ...buildApiParams(job.settings),
                 };
 
@@ -201,19 +191,9 @@ const Queue = (() => {
         _notify();
 
         try {
-            // Compress the image before sending to reduce payload size
-            let imageForApi = job.image;
-            if (imageForApi && imageForApi.startsWith('data:')) {
-                try {
-                    imageForApi = await LudoAPI.compressImage(imageForApi);
-                } catch (compErr) {
-                    console.warn('⚠️ Image compression failed, using original:', compErr.message);
-                }
-            }
-
             const params = {
                 motion_prompt: job.settings.motion_prompt,
-                initial_image: imageForApi,
+                initial_image: job.image,
                 ...buildApiParams(job.settings),
             };
 
