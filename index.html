@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nochi Ludo — Bulk Sprite Sheet Creator</title>
+  <meta name="description"
+    content="Bulk generate animated spritesheets from sprite images using the Ludo.ai API. Upload multiple sprites, configure animation settings, and batch process them all at once.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+</head>
+
+<body>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Modal / Lightbox -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal-content">
+      <button id="modal-close" class="modal-close">✕</button>
+      <img src="" alt="Full size preview">
+    </div>
+  </div>
+
+  <div class="app-container">
+
+    <!-- ═══ Header ═══ -->
+    <header class="app-header">
+      <div class="app-header__brand">
+        <img src="Nochilogofinal.png" alt="nochi" class="app-header__logo-img">
+        <div>
+          <h1 class="app-header__logo">nochi</h1>
+          <p class="app-header__tagline">Bulk Sprite Sheet Creator</p>
+        </div>
+      </div>
+      <div class="app-header__status">
+        <span class="status-dot"></span>
+        <span>API Connected</span>
+      </div>
+    </header>
+
+    <!-- ═══ Main Grid: Upload + Settings | Queue ═══ -->
+    <div class="main-grid">
+
+      <!-- ── Left Column: Upload & Settings ── -->
+      <div class="card" id="upload-card">
+
+        <!-- Mode Tabs -->
+        <div class="tabs" id="mode-tabs">
+          <button class="tab active" data-tab="manual">🖼️ Manual Mode</button>
+          <button class="tab" data-tab="batch">📄 Batch Mode</button>
+        </div>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- MANUAL MODE TAB                                -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div id="tab-manual" class="tab-content active">
+
+          <!-- Drop Zone -->
+          <div id="drop-zone" class="drop-zone">
+            <div class="drop-zone__icon">📁</div>
+            <div class="drop-zone__text">
+              <strong>Drop sprite images here</strong><br>
+              or click to browse · PNG, JPG, WebP
+            </div>
+            <input id="file-input" class="drop-zone__input" type="file" accept="image/*" multiple>
+          </div>
+
+          <!-- URL Input -->
+          <div class="divider">or paste a URL</div>
+          <div class="url-input-group">
+            <input id="url-input" type="url" placeholder="https://example.com/sprite.png">
+            <button id="btn-add-url" class="btn btn--secondary btn--sm">+ Add</button>
+          </div>
+
+          <!-- Preview Strip -->
+          <div id="preview-strip" class="preview-strip"></div>
+
+          <!-- Motion Prompt -->
+          <div class="settings-section">
+            <div class="form-group">
+              <label for="setting-motion-prompt">Motion Prompt *</label>
+              <textarea id="setting-motion-prompt"
+                placeholder='Describe the animation, e.g. "walking forward", "idle breathing", "attack slash"...'></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- BATCH MODE TAB                                 -->
+        <!-- ══════════════════════════════════════════════ -->
+        <div id="tab-batch" class="tab-content">
+
+          <!-- Step 1: Character Image -->
+          <div class="batch-step">
+            <div class="batch-step__header">
+              <span class="batch-step__number">1</span>
+              <span class="batch-step__label">Upload Character Image</span>
+            </div>
+            <div id="batch-drop-zone" class="drop-zone" style="padding: 24px 16px;">
+              <div class="drop-zone__icon" style="font-size:1.8rem;">🧙</div>
+              <div class="drop-zone__text">
+                <strong>Drop one character sprite here</strong><br>
+                This image will be used for ALL animations
+              </div>
+              <input id="batch-file-input" class="drop-zone__input" type="file" accept="image/*">
+            </div>
+            <div class="divider">or paste a URL</div>
+            <div class="url-input-group">
+              <input id="batch-url-input" type="url" placeholder="https://example.com/character.png">
+              <button id="btn-batch-add-url" class="btn btn--secondary btn--sm">Set</button>
+            </div>
+            <!-- Character preview -->
+            <div id="batch-char-preview" class="batch-char-preview hidden">
+              <img id="batch-char-img" src="" alt="character">
+              <div class="batch-char-preview__info">
+                <span id="batch-char-name" class="text-sm"></span>
+                <button id="btn-batch-remove-char" class="btn btn--sm btn--secondary">✕ Remove</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Prompt File -->
+          <div class="batch-step">
+            <div class="batch-step__header">
+              <span class="batch-step__number">2</span>
+              <span class="batch-step__label">Upload Prompt File (.md)</span>
+            </div>
+            <div id="batch-md-zone" class="drop-zone" style="padding: 24px 16px;">
+              <div class="drop-zone__icon" style="font-size:1.8rem;">📝</div>
+              <div class="drop-zone__text">
+                <strong>Drop your .md prompt file here</strong><br>
+                Each <code>## Heading</code> = animation name, line below = prompt
+              </div>
+              <input id="batch-md-input" class="drop-zone__input" type="file" accept=".md,.txt,.markdown">
+            </div>
+            <!-- Parsed prompts preview -->
+            <div id="batch-prompts-preview" class="batch-prompts-preview hidden">
+              <div class="flex justify-between items-center mb-md">
+                <span class="text-sm text-accent mono" id="batch-prompts-count"></span>
+                <button id="btn-batch-remove-md" class="btn btn--sm btn--secondary">✕ Remove File</button>
+              </div>
+              <div id="batch-prompts-list" class="batch-prompts-list"></div>
+            </div>
+            <!-- Format help -->
+            <details class="batch-format-help mt-md">
+              <summary class="text-sm text-muted" style="cursor:pointer;">📖 How to format your .md file</summary>
+              <div class="batch-format-help__body">
+                <pre><code># Character Animations
+
+## Idle
+idle breathing, slight body movement
+
+## Walk
+walking forward, left foot then right foot
+
+## Run
+running fast, arms pumping
+
+## Attack
+sword slash attack, quick swing</code></pre>
+                <p class="text-xs text-muted mt-sm">Each <code>## Heading</code> is the animation name. The line(s)
+                  below it are the motion prompt. You can download the <a href="sample-prompts.md" download
+                    class="text-accent">sample file</a>.</p>
+              </div>
+            </details>
+          </div>
+
+          <!-- Step 3: Generate -->
+          <div class="batch-step">
+            <div class="batch-step__header">
+              <span class="batch-step__number">3</span>
+              <span class="batch-step__label">Configure settings below, then generate</span>
+            </div>
+            <button id="btn-batch-generate" class="btn btn--success btn--lg btn--full" disabled>
+              🚀 Generate All Animations
+            </button>
+            <p id="batch-credit-info" class="text-xs text-muted mt-sm" style="text-align:center;"></p>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════ -->
+        <!-- SHARED SETTINGS (visible in both modes)        -->
+        <!-- ══════════════════════════════════════════════ -->
+
+        <!-- Core Settings -->
+        <div class="settings-section">
+          <div class="settings-section__title">Core Settings</div>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label for="setting-model">Model</label>
+              <select id="setting-model">
+                <option value="standard" selected>Standard — Consistent</option>
+                <option value="new">New — Higher Quality</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="setting-frames">Frames</label>
+              <select id="setting-frames">
+                <option value="4">4</option>
+                <option value="9">9</option>
+                <option value="16">16</option>
+                <option value="25">25</option>
+                <option value="36" selected>36 (default)</option>
+                <option value="49">49</option>
+                <option value="64">64</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="setting-frame-size">Frame Size (px)</label>
+              <select id="setting-frame-size">
+                <option value="64">64</option>
+                <option value="128">128</option>
+                <option value="256" selected>256 (default)</option>
+                <option value="0">Max Resolution</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="setting-duration">Duration</label>
+              <select id="setting-duration">
+                <option value="1.2">1.2s</option>
+                <option value="1.5">1.5s</option>
+                <option value="2" selected>2s (default)</option>
+                <option value="2.5">2.5s</option>
+                <option value="3">3s</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Advanced Settings (Collapsible) -->
+        <div class="settings-section">
+          <button class="collapsible-toggle" type="button">
+            Advanced Settings
+            <span class="chevron">▼</span>
+          </button>
+          <div class="collapsible-body">
+            <div class="settings-grid mt-md">
+              <div class="form-group">
+                <label for="setting-image-type">Image Type</label>
+                <select id="setting-image-type">
+                  <option value="" selected>Auto</option>
+                  <option value="sprite">Sprite</option>
+                  <option value="sprite-vfx">Sprite VFX</option>
+                  <option value="ui_asset">UI Asset</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="setting-pixel-art">Pixel Art Filter</label>
+                <select id="setting-pixel-art">
+                  <option value="none" selected>None</option>
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="setting-margin-mode">Margin Mode</label>
+                <select id="setting-margin-mode">
+                  <option value="auto" selected>Auto</option>
+                  <option value="manual">Manual</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="setting-margin-ratio">Margin Ratio</label>
+                <input id="setting-margin-ratio" type="number" min="0" max="1" step="0.05" placeholder="0.0 - 1.0">
+              </div>
+            </div>
+
+            <!-- Toggles -->
+            <div class="mt-md" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="toggle-group">
+                <label class="toggle">
+                  <input type="checkbox" id="setting-loop" checked>
+                  <span class="toggle__slider"></span>
+                </label>
+                <span class="toggle-label">Seamless Loop</span>
+              </div>
+              <div class="toggle-group">
+                <label class="toggle">
+                  <input type="checkbox" id="setting-crop">
+                  <span class="toggle__slider"></span>
+                </label>
+                <span class="toggle-label">Crop to Content</span>
+              </div>
+              <div class="toggle-group">
+                <label class="toggle">
+                  <input type="checkbox" id="setting-augment" checked>
+                  <span class="toggle__slider"></span>
+                </label>
+                <span class="toggle-label">Augment Prompt</span>
+              </div>
+              <div class="toggle-group">
+                <label class="toggle">
+                  <input type="checkbox" id="setting-gif">
+                  <span class="toggle__slider"></span>
+                </label>
+                <span class="toggle-label">Generate GIF</span>
+              </div>
+              <div class="toggle-group">
+                <label class="toggle">
+                  <input type="checkbox" id="setting-individual-frames">
+                  <span class="toggle__slider"></span>
+                </label>
+                <span class="toggle-label">Individual Frames</span>
+              </div>
+              <div class="toggle-group">
+                <label class="toggle">
+                  <input type="checkbox" id="setting-spritesheet-bg">
+                  <span class="toggle__slider"></span>
+                </label>
+                <span class="toggle-label">Keep Background</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add to Queue Button (Manual mode only) -->
+        <div id="manual-add-section" class="add-queue-section">
+          <button id="btn-add-to-queue" class="btn btn--primary btn--lg btn--full">
+            ➕ Add to Queue
+          </button>
+          <p class="text-xs text-muted mt-sm" style="text-align:center;">Each animation costs 5 credits</p>
+        </div>
+      </div>
+
+      <!-- ── Right Column: Queue ── -->
+      <div class="card" id="queue-card">
+        <div class="queue-header">
+          <h2 class="card__title" style="margin-bottom:0;"><span class="icon">⚡</span> Animation Queue</h2>
+          <div class="flex items-center gap-sm">
+            <span id="queue-counter" class="queue-counter">0 items</span>
+          </div>
+        </div>
+
+        <div class="queue-actions mb-md">
+          <button id="btn-process-all" class="btn btn--success btn--sm" disabled>
+            ▶ Process All
+          </button>
+          <button id="btn-cancel" class="btn btn--danger btn--sm hidden">
+            ⏹ Cancel
+          </button>
+          <button id="btn-clear-queue" class="btn btn--secondary btn--sm">
+            🗑 Clear
+          </button>
+        </div>
+
+        <div id="progress-bar" class="progress-bar">
+          <div id="progress-fill" class="progress-bar__fill"></div>
+        </div>
+
+        <div id="queue-list" class="queue-list"></div>
+      </div>
+    </div>
+
+    <!-- ═══ Results Gallery ═══ -->
+    <section id="results-section" class="results-section card">
+      <div class="results-header">
+        <h2 class="section-title"><span class="icon">🎨</span> Results Gallery</h2>
+        <div class="flex items-center gap-sm">
+          <span id="results-count" class="text-sm text-muted mono"></span>
+          <button id="btn-download-all" class="btn btn--secondary btn--sm">⬇ Download All</button>
+          <button id="btn-clear-results" class="btn btn--secondary btn--sm">🗑 Clear</button>
+        </div>
+      </div>
+      <div id="results-grid" class="results-grid"></div>
+    </section>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/queue.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+
+</html>
