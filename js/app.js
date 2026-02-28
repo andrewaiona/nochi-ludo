@@ -33,7 +33,7 @@ const App = (() => {
         // --- Batch mode: MD file drop zone ---
         const batchMdZone = document.getElementById('batch-md-zone');
         const batchMdInput = document.getElementById('batch-md-input');
-        UI.initDropZone(batchMdZone, batchMdInput, handleBatchMdFile);
+        UI.initDropZone(batchMdZone, batchMdInput, handleBatchMdFile, () => true);
 
         // Init collapsible sections
         UI.initCollapsibles();
