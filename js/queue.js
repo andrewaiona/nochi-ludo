@@ -146,16 +146,26 @@ const Queue = (() => {
             _notify();
 
             try {
+                // Compress the image before sending to reduce payload size
+                let imageForApi = job.image;
+                if (imageForApi && imageForApi.startsWith('data:')) {
+                    try {
+                        imageForApi = await LudoAPI.compressImage(imageForApi);
+                    } catch (compErr) {
+                        console.warn('⚠️ Image compression failed, using original:', compErr.message);
+                    }
+                }
+
                 const params = {
                     motion_prompt: job.settings.motion_prompt,
-                    initial_image: job.image,
+                    initial_image: imageForApi,
                     ...buildApiParams(job.settings),
                 };
 
                 // Log full params (truncate base64)
                 const logParams = { ...params };
                 if (logParams.initial_image && logParams.initial_image.startsWith('data:')) {
-                    logParams.initial_image = logParams.initial_image.substring(0, 60) + '... (base64)';
+                    logParams.initial_image = logParams.initial_image.substring(0, 60) + `... (${Math.round(params.initial_image.length / 1024)}KB)`;
                 }
                 console.log(`📤 Job ${i + 1}/${pendingJobs.length} — "${job.settings.motion_prompt}":`, JSON.stringify(logParams, null, 2));
 
@@ -191,9 +201,19 @@ const Queue = (() => {
         _notify();
 
         try {
+            // Compress the image before sending to reduce payload size
+            let imageForApi = job.image;
+            if (imageForApi && imageForApi.startsWith('data:')) {
+                try {
+                    imageForApi = await LudoAPI.compressImage(imageForApi);
+                } catch (compErr) {
+                    console.warn('⚠️ Image compression failed, using original:', compErr.message);
+                }
+            }
+
             const params = {
                 motion_prompt: job.settings.motion_prompt,
-                initial_image: job.image,
+                initial_image: imageForApi,
                 ...buildApiParams(job.settings),
             };
 

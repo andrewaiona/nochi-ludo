@@ -78,6 +78,47 @@ const LudoAPI = (() => {
   }
 
   /**
+   * Compress an image to reduce payload size for the API.
+   * Takes a base64 data URI or URL, resizes to max dimensions,
+   * and returns a compressed base64 data URI.
+   * @param {string} imageSrc - base64 data URI or image URL
+   * @param {number} maxSize - max width/height in pixels (default 512)
+   * @returns {Promise<string>} compressed base64 data URI
+   */
+  function compressImage(imageSrc, maxSize = 512) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        // Calculate new dimensions maintaining aspect ratio
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round(height * maxSize / width);
+            width = maxSize;
+          } else {
+            width = Math.round(width * maxSize / height);
+            height = maxSize;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Use PNG to preserve transparency (important for sprites)
+        const compressed = canvas.toDataURL('image/png');
+        console.log(`🗜️ Image compressed: ${img.naturalWidth}×${img.naturalHeight} → ${width}×${height} (${Math.round(compressed.length / 1024)}KB)`);
+        resolve(compressed);
+      };
+      img.onerror = () => reject(new Error('Failed to load image for compression'));
+      img.src = imageSrc;
+    });
+  }
+
+  /**
    * Check if a string is a URL
    */
   function isUrl(str) {
@@ -192,6 +233,7 @@ const LudoAPI = (() => {
     transferMotion,
     listAnimationPresets,
     fileToBase64,
+    compressImage,
     isUrl,
   };
 })();
