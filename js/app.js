@@ -470,24 +470,86 @@ const App = (() => {
         }
     }
 
-    function downloadFrames(jobId) {
+    async function downloadFrames(jobId) {
         const job = Queue.getAll().find(j => j.id === jobId);
-        if (!job || !job.result || !job.result.individual_frame_urls) {
-            UI.showToast('No individual frames available', 'warning');
+        if (!job || !job.result) return;
+
+        const r = job.result;
+
+        // If API provided individual frames, use them
+        if (r.individual_frame_urls && r.individual_frame_urls.length > 0) {
+            UI.showToast(`Downloading ${r.individual_frame_urls.length} frames...`, 'info');
+            r.individual_frame_urls.forEach((url, i) => {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `frame_${job.settings.motion_prompt.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}_${i + 1}.png`;
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
             return;
         }
 
-        job.result.individual_frame_urls.forEach((url, i) => {
-            const a = document.createElement('a');
-            a.href = url;
-            a.target = '_blank';
-            a.download = `frame_${i + 1}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        });
+        // Otherwise, slice the spritesheet on the client side
+        if (r.spritesheet_url && r.num_cols && r.num_rows && r.num_frames) {
+            UI.showToast(`Extracting ${r.num_frames} frames from spritesheet...`, 'info');
+            try {
+                // Load spritesheet image
+                const img = new Image();
+                img.crossOrigin = 'anonymous'; // Required to read canvas data from external URL
 
-        UI.showToast(`Downloading ${job.result.individual_frame_urls.length} frames`, 'info');
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = r.spritesheet_url;
+                });
+
+                const frameWidth = img.width / r.num_cols;
+                const frameHeight = img.height / r.num_rows;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = frameWidth;
+                canvas.height = frameHeight;
+                const ctx = canvas.getContext('2d');
+
+                let frameCount = 0;
+                for (let row = 0; row < r.num_rows; row++) {
+                    for (let col = 0; col < r.num_cols; col++) {
+                        if (frameCount >= r.num_frames) break;
+
+                        ctx.clearRect(0, 0, frameWidth, frameHeight);
+                        ctx.drawImage(
+                            img,
+                            col * frameWidth, row * frameHeight, frameWidth, frameHeight, // Source crop
+                            0, 0, frameWidth, frameHeight // Destination canvas
+                        );
+
+                        // Convert to blob and download
+                        const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                        const url = URL.createObjectURL(blob);
+
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `frame_${job.settings.motion_prompt.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}_${(frameCount + 1).toString().padStart(2, '0')}.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+
+                        // Cleanup
+                        setTimeout(() => URL.revokeObjectURL(url), 100);
+
+                        frameCount++;
+                    }
+                }
+                UI.showToast('Frames downloaded successfully', 'success');
+            } catch (err) {
+                console.error("Frame extraction error:", err);
+                UI.showToast('Failed to slice frames from spritesheet', 'error');
+            }
+        } else {
+            UI.showToast('No frame data available to download', 'warning');
+        }
     }
 
     // ═══════════════════════════════════════════════════════════

@@ -146,7 +146,8 @@ const UI = (() => {
 
     gridEl.innerHTML = completedJobs.map(job => {
       const r = job.result;
-      const hasFrames = r.individual_frame_urls && r.individual_frame_urls.length > 0;
+      const canDownloadFrames = Boolean(r.spritesheet_url && r.num_frames && r.num_cols && r.num_rows);
+
       return `
         <div class="result-card">
           <div class="result-card__preview" onclick="UI.openModal('${r.spritesheet_url}')">
@@ -163,20 +164,8 @@ const UI = (() => {
               <a href="${r.spritesheet_url}" target="_blank" download class="btn btn--sm btn--secondary">⬇ Spritesheet</a>
               ${r.gif_url ? `<a href="${r.gif_url}" target="_blank" download class="btn btn--sm btn--secondary">⬇ GIF</a>` : ''}
               ${r.video_url ? `<a href="${r.video_url}" target="_blank" class="btn btn--sm btn--secondary">▶ Video</a>` : ''}
-              ${hasFrames ? `<button class="btn btn--sm btn--primary" onclick="App.downloadFrames('${job.id}')">⬇ All Frames (${r.individual_frame_urls.length})</button>` : ''}
+              ${canDownloadFrames ? `<button class="btn btn--sm btn--primary" onclick="App.downloadFrames('${job.id}')">⬇ All Frames (${r.num_frames})</button>` : ''}
             </div>
-            ${hasFrames ? `
-            <div class="result-card__frames">
-              <div class="result-card__frames-label">Individual Frames</div>
-              <div class="result-card__frames-grid">
-                ${r.individual_frame_urls.map((url, i) => `
-                  <a href="${url}" target="_blank" download="frame_${i + 1}.png" class="result-card__frame-thumb" title="Frame ${i + 1}">
-                    <img src="${url}" alt="Frame ${i + 1}" loading="lazy">
-                    <span class="result-card__frame-num">${i + 1}</span>
-                  </a>
-                `).join('')}
-              </div>
-            </div>` : ''}
           </div>
         </div>`;
     }).join('');
