@@ -1,41 +1,46 @@
+const https = require('https');
+
 const apiKey = '69a394c3-9808-4884-8055-41f59e0d9f97';
 
-async function testApi() {
-    // Create a 512x512 transparent PNG directly to test payload size limits
-    const { createCanvas } = require('canvas');
-    const canvas = createCanvas(512, 512);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-    ctx.fillRect(0, 0, 512, 512);
-    // Add randomness to defeat compression
-    for (let i = 0; i < 50000; i++) {
-        ctx.fillStyle = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`;
-        ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
-    }
-    const base64Image = canvas.toDataURL('image/png');
-    console.log("Size:", Math.round(base64Image.length / 1024) + "KB");
+async function testApi(promptText) {
+    // 1x1 transparent png with prefix
+    const base64Image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
-    const payload = {
+    const payload = JSON.stringify({
         initial_image: base64Image,
-        motion_prompt: "running fast",
+        motion_prompt: promptText,
         model: "standard",
-        frames: 4,
-        duration: 2
-    };
-
-    console.log("Sending payload...");
-    const response = await fetch("https://api.ludo.ai/api/assets/sprite/animate", {
-        method: "POST",
-        headers: {
-            "Authorization": `ApiKey ${apiKey}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
+        frames: 36,
+        frame_size: 256,
+        duration: 2,
+        individual_frames: false  // <--- TESTING THIS
     });
 
-    const data = await response.json();
-    console.log(`Status: ${response.status}`);
-    console.log("Response:", data);
+    return new Promise((resolve, reject) => {
+        const req = https.request('https://api.ludo.ai/api/assets/sprite/animate', {
+            method: 'POST',
+            headers: {
+                "Authorization": `ApiKey ${apiKey}`,
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(payload)
+            }
+        }, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                console.log(`[${promptText}] STATUS: ${res.statusCode}`);
+                console.log(`[${promptText}] RESP: ${data}`);
+                resolve(res.statusCode);
+            });
+        });
+
+        req.on('error', reject);
+        req.write(payload);
+        req.end();
+    });
 }
 
-testApi().catch(console.error);
+(async () => {
+    console.log("Testing API with individual_frames: false...");
+    await testApi("walk");
+})();

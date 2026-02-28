@@ -245,7 +245,8 @@ const Queue = (() => {
         if (settings.crop !== undefined) params.crop = settings.crop;
         if (settings.augment_prompt !== undefined) params.augment_prompt = settings.augment_prompt;
         if (settings.gif !== undefined) params.gif = settings.gif;
-        params.individual_frames = true; // Always request individual frames
+        // WARNING: Ludo.ai API currently crashes with 500 error if individual_frames=true AND image is base64
+        // To ensure stability across Manual/Batch modes with uploaded images, we do not request individual frames.
         if (settings.spritesheet_with_background !== undefined) {
             params.spritesheet_with_background = settings.spritesheet_with_background;
         }
