@@ -502,7 +502,8 @@ const App = (() => {
                 await new Promise((resolve, reject) => {
                     img.onload = resolve;
                     img.onerror = reject;
-                    img.src = r.spritesheet_url;
+                    // Route through a CORS proxy to avoid tainted canvas errors when hosted on Vercel
+                    img.src = `https://corsproxy.io/?${encodeURIComponent(r.spritesheet_url)}`;
                 });
 
                 const frameWidth = img.width / r.num_cols;
