@@ -131,8 +131,15 @@ const Queue = (() => {
 
         const pendingJobs = jobs.filter(j => j.status === 'pending' || j.status === 'error');
 
-        for (const job of pendingJobs) {
+        for (let i = 0; i < pendingJobs.length; i++) {
+            const job = pendingJobs[i];
             if (!isProcessing) break; // allow cancellation
+
+            // Cooldown between requests to avoid API rate limits
+            if (i > 0) {
+                console.log(`⏳ Waiting 3s before next request...`);
+                await new Promise(r => setTimeout(r, 3000));
+            }
 
             job.status = 'processing';
             job.error = null;
@@ -145,6 +152,13 @@ const Queue = (() => {
                     ...buildApiParams(job.settings),
                 };
 
+                // Log full params (truncate base64)
+                const logParams = { ...params };
+                if (logParams.initial_image && logParams.initial_image.startsWith('data:')) {
+                    logParams.initial_image = logParams.initial_image.substring(0, 60) + '... (base64)';
+                }
+                console.log(`📤 Job ${i + 1}/${pendingJobs.length} — "${job.settings.motion_prompt}":`, JSON.stringify(logParams, null, 2));
+
                 const result = await LudoAPI.animateSprite(params);
                 job.status = 'done';
                 job.result = result;
@@ -153,6 +167,7 @@ const Queue = (() => {
             } catch (err) {
                 job.status = 'error';
                 job.error = err.message;
+                console.error(`❌ Job failed: "${job.settings.motion_prompt}" — ${err.message}`);
             }
 
             _persist();

@@ -15,7 +15,7 @@ const LudoAPI = (() => {
     return API_KEY;
   }
 
-  async function _request(method, endpoint, body = null) {
+  async function _request(method, endpoint, body = null, retries = 2) {
     const url = `${BASE_URL}${endpoint}`;
     const headers = {
       'Authorization': `ApiKey ${API_KEY}`,
@@ -27,15 +27,42 @@ const LudoAPI = (() => {
       options.body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, options);
-    const data = await response.json();
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(url, options);
 
-    if (!response.ok) {
-      const errorMsg = data?.message || data?.error || `API Error (${response.status})`;
-      throw new Error(errorMsg);
+        // If 500/502/503, retry after a delay
+        if (response.status >= 500 && attempt < retries) {
+          const delay = (attempt + 1) * 3000;
+          console.warn(`⚠️ API returned ${response.status}, retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${retries})`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+
+        let data;
+        try {
+          data = await response.json();
+        } catch (e) {
+          throw new Error(`API Error (${response.status}): non-JSON response`);
+        }
+
+        if (!response.ok) {
+          const errorMsg = data?.message || data?.error || JSON.stringify(data) || `API Error (${response.status})`;
+          console.error('❌ API error response:', data);
+          throw new Error(errorMsg);
+        }
+
+        return data;
+      } catch (err) {
+        if (attempt < retries && err.message.includes('fetch')) {
+          const delay = (attempt + 1) * 3000;
+          console.warn(`⚠️ Network error, retrying in ${delay / 1000}s...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        throw err;
+      }
     }
-
-    return data;
   }
 
   /**
